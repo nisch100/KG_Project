@@ -1,0 +1,65 @@
+LOAD CSV WITH HEADERS FROM 'file:///June_dump/homicide_subevent_inclI.csv' AS line FIELDTERMINATOR '\t' 
+with line, line.First_Name + " " + line.Last_Name as vicname
+MERGE (area:AreaOfOccurrence {name: COALESCE(line.Area_of_Occurrence, "Missing")})
+MERGE (dr:CaseID {UID: line.DR})
+MERGE (vic:Victim {Name:vicname})
+CREATE (entry:ChronoEntry 
+    {
+        Investigation:line.Investigation, 
+        Written_Notes:line.Written_Notes, 
+        Chrono_Time:line.Chrono_Time,
+        Chrono_Date:line.Chrono_Date,
+        Sequence_No:line.Sequence_No,
+        Date_of_Occurrence_1:line.Date_of_Occurrence_1,
+        Date_of_Occurrence_2:line.Date_of_Occurrence_2,
+        Notes:line.Notes,
+        caseID : line.DR,
+        Subevents:line.Subevent
+    })
+CREATE (dr) - [:hasChronoEntry ] -> (entry)
+MERGE (dr) - [:caseOccurrence] -> (area)
+MERGE (area) - [:caseFound] -> (dr)
+MERGE (dr) - [:caseHasVictim] -> (vic)
+MERGE (vic) - [:caseHasVictim] -> (dr)
+
+
+
+
+LOAD CSV WITH HEADERS FROM 'file:///June_Dump/license_Cases.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID}) 
+MERGE (car:License {Name: COALESCE(line.License,"Missing")})
+CREATE (cases) - [:License] -> (car)
+CREATE (car) - [:License] -> (cases)
+
+
+
+
+LOAD CSV WITH HEADERS FROM 'file:///June_Dump/car_Cases.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID}) 
+MERGE (car:Vehicle {Name: line.Car})
+CREATE (cases) - [:Vehicle] -> (car)
+CREATE (car) - [:Vehicle] -> (cases)
+
+
+LOAD CSV WITH HEADERS FROM 'file:///June_Dump/Weapon_Cases.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID}) 
+MERGE (weapon:Weapon {Name: line.Weapon})
+CREATE (cases) - [:Weapon] -> (weapon)
+CREATE (weapon) - [:Weapon] -> (cases)
+
+
+LOAD CSV WITH HEADERS FROM 'file:///June_Dump/detective_list.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID})
+MERGE (detective:Detective {Det_name: line.Detective})
+CREATE (cases) - [:caseHasDetective] -> (detective)
+CREATE (detective) - [:DetectiveFor] -> (cases)
+
+
+
+
+
+LOAD CSV WITH HEADERS FROM 'file:///June_Dump/Person_Relation.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID})
+MERGE (person:Person {Name: line.Name})
+CREATE (cases) - [:People{type:line.Relation}] -> (person)
+CREATE (person) - [:Associated{type:line.Relation}] -> (cases)

@@ -1,0 +1,199 @@
+
+"Adding files to import path"
+
+C:\Users\chand\.Neo4jDesktop\relate-data\dbmss\dbms-7350bede-4d4c-41d7-acc4-4ad65e5f0dfe\import
+
+
+Construct Basic Graph 
+LOAD CSV WITH HEADERS FROM 'file:///homicide_original.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (area:AreaOfOccurrence {name: line.Area_of_Occurrence})
+MERGE (dr:CaseID {UID: line.DR})
+MERGE (vic:Victim {Victim_Last_Name:line.Victim_Last_Name, Victime_First_Name:line.Victime_First_Name})
+MERGE (det:Detective {Det_name: line.Detective_1})
+CREATE (entry:ChoroEntry 
+    {
+        Investigation:line.Investigation, 
+        Written_Notes:line.Written_Notes, 
+        Chrono_Time:line.Chrono_Time,
+        Chrono_Date:line.Chrono_Date,
+        Sequence_No:line.Sequence_No,
+        Date_of_Occurrence_1:line.Date_of_Occurrence_1,
+        Date_of_Occurrence_2:line.Date_of_Occurrence_2,
+        Notes:line.Notes
+    })
+CREATE (dr) - [:hasChronoEntry ] -> (entry)
+MERGE (dr) - [:caseHasDetective] -> (det)
+MERGE (dr) - [:caseOccurrence] -> (area)
+MERGE (dr) - [:caseHasVictim] -> (vic)
+
+
+##Add Similar Case Mapping"
+LOAD CSV WITH HEADERS FROM 'file:///Sim_case.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (orig_case:CaseID {UID: line.case_src})
+MERGE (other: CaseID {UID: line.case_tar})
+MERGE (orig_case) - [:SimilarCase{score:line.score}] -> (other)
+MERGE (other) - [:SimilarCase{score:line.score}] -> (orig_case)
+
+
+
+
+########################MASTER DF Query######################################
+
+
+LOAD CSV WITH HEADERS FROM 'file:///master_df.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (area:AreaOfOccurrence {name: line.Area_of_Occurrence})
+MERGE (dr:CaseID {UID: line.DR})
+MERGE (vic:Victim {Victim_Last_Name:line.Victim_Last_Name, Victime_First_Name:line.Victime_First_Name})
+MERGE (det:Detective {Det_name: line.Detective_1})
+CREATE (entry:ChronoEntry 
+    {
+        Investigation:line.Investigation, 
+        Written_Notes:line.Written_Notes, 
+        Chrono_Time:line.Chrono_Time,
+        Chrono_Date:line.Chrono_Date,
+        Sequence_No:line.Sequence_No,
+        Date_of_Occurrence_1:line.Date_of_Occurrence_1,
+        Date_of_Occurrence_2:line.Date_of_Occurrence_2,
+        Notes:line.Notes,
+        caseID : line.DR,
+        Subevents:line.Subevent
+    })
+CREATE (dr) - [:hasChronoEntry ] -> (entry)
+MERGE (dr) - [:caseOccurrence] -> (area)
+MERGE (area) - [:caseFound] -> (dr)
+MERGE (dr) - [:caseHasVictim] -> (vic)
+
+
+################################# Detective List ################################################################
+
+LOAD CSV WITH HEADERS FROM 'file:///detective_list.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID})
+MERGE (detective:Detective {Det_name: line.Detective})
+CREATE (cases) - [:caseHasDetective] -> (detective)
+CREATE (detective) - [:DetectiveFor] -> (cases)
+
+
+
+################################ Similar Cases #############################################
+LOAD CSV WITH HEADERS FROM 'file:///Sim_case.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (orig_case:CaseID {UID: line.case_src})
+MERGE (other: CaseID {UID: line.case_tar})
+MERGE (orig_case) - [:SimilarCase{score:line.score}] -> (other)
+MERGE (other) - [:SimilarCase{score:line.score}] -> (orig_case)
+
+
+
+
+
+################################## MAP PERSON ###########################
+LOAD CSV WITH HEADERS FROM 'file:///Person_Relation.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID})
+MERGE (person:Person {Name: line.Name})
+CREATE (cases) - [:People{type:line.Relation}] -> (person)
+CREATE (person) - [:Associated{type:line.Relation}] -> (cases)
+
+
+
+
+########################### WeaponCases ############################
+
+LOAD CSV WITH HEADERS FROM 'file:///Weapon_Cases.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID}) 
+MERGE (weapon:Weapon {Name: line.Weapon})
+CREATE (cases) - [:Weapon] -> (weapon)
+CREATE (weapon) - [:Weapon] -> (cases)
+
+
+
+
+
+######################## Car Cases##########################
+
+
+LOAD CSV WITH HEADERS FROM 'file:///Homicide_dump/car_Cases.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID}) 
+MERGE (car:Vehicle {Name: line.Car})
+CREATE (cases) - [:Vehicle] -> (car)
+CREATE (car) - [:Vehicle] -> (cases)
+
+
+
+################### License Cases ###########################
+LOAD CSV WITH HEADERS FROM 'file:///Homicide_dump/license_Cases.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID}) 
+MERGE (car:License {Name: line.License})
+CREATE (cases) - [:License] -> (car)
+CREATE (car) - [:License] -> (cases)
+
+
+
+
+###############################################################JUNE DATA###############################################
+
+
+############################Master DF##############################
+LOAD CSV WITH HEADERS FROM 'file:///June_dump/homicide_subevent_incl.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (area:AreaOfOccurrence {Name: COALESCE(line.Area_of_Occurrencee, "Missing")})
+MERGE (dr:CaseID {UID: line.DR})
+MERGE (vic:Victim {Victim_Last_Name:COALESCE(line.Victim_Last_Name,"Missing"), Victime_First_Name:COALESCE(line.Victime_First_Name,"Missing")})
+MERGE (det:Detective {Det_name: COALESCE(line.Detective_1,"Missing")})
+CREATE (entry:ChronoEntry 
+    {
+        Investigation:line.Investigation, 
+        Written_Notes:line.Written_Notes, 
+        Chrono_Time:line.Chrono_Time,
+        Chrono_Date:line.Chrono_Date,
+        Sequence_No:line.Sequence_No,
+        Date_of_Occurrence_1:line.Date_of_Occurrence_1,
+        Date_of_Occurrence_2:line.Date_of_Occurrence_2,
+        Notes:line.Notes,
+        caseID : line.DR,
+        Subevents:line.Subevent
+    })
+CREATE (dr) - [:hasChronoEntry ] -> (entry)
+MERGE (dr) - [:caseOccurrence] -> (area)
+MERGE (area) - [:caseFound] -> (dr)
+MERGE (dr) - [:caseHasVictim] -> (vic)
+
+
+#############################License_Case##############################
+LOAD CSV WITH HEADERS FROM 'file:///June_Dump/license_Cases.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID}) 
+MERGE (car:License {Name: COALESCE(line.License,"Missing")})
+CREATE (cases) - [:License] -> (car)
+CREATE (car) - [:License] -> (cases)
+
+#############################Car_Cases##############################
+LOAD CSV WITH HEADERS FROM 'file:///June_Dump/car_Cases.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID}) 
+MERGE (car:Vehicle {Name: line.Car})
+CREATE (cases) - [:Vehicle] -> (car)
+CREATE (car) - [:Vehicle] -> (cases)
+
+
+
+##################################Weapon Case#######################################33
+LOAD CSV WITH HEADERS FROM 'file:///June_Dump/Weapon_Cases.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID}) 
+MERGE (weapon:Weapon {Name: line.Weapon})
+CREATE (cases) - [:Weapon] -> (weapon)
+CREATE (weapon) - [:Weapon] -> (cases)
+
+
+
+############################################ Person Relation##########################################
+LOAD CSV WITH HEADERS FROM 'file:///June_Dump/Person_Relation.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID})
+MERGE (person:Person {Name: line.Name})
+CREATE (cases) - [:People{type:line.Relation}] -> (person)
+CREATE (person) - [:Associated{type:line.Relation}] -> (cases)
+
+
+
+###########################################Detective List################################################
+
+LOAD CSV WITH HEADERS FROM 'file:///June_Dump/detective_list.csv' AS line FIELDTERMINATOR '\t' 
+MERGE (cases:CaseID {UID: line.CaseID})
+MERGE (detective:Detective {Det_name: line.Detective})
+CREATE (cases) - [:caseHasDetective] -> (detective)
+CREATE (detective) - [:DetectiveFor] -> (cases)

@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Flask App</title>
+    <style>
+      /* center the form */
+      #main-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        height: 100vh;
+        margin-top: 50px;
+      }
+  
+      /* style the labels and inputs */
+      label {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+  
+      input[type="text"] {
+        font-size: 15px;
+        padding: 5px;
+        width: 150px;
+        box-sizing: border-box;
+      }
+      
+      /* style the submit button */
+      button[type="submit"] {
+        font-size: 13px;
+        padding: 3px;
+        width: 70px;
+        margin: 0 auto;
+        display: block;
+      }
+
+      #results {
+        margin-top: 50px;
+        font-size: 20px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="main-content">
+      <h1>Case Search</h1>
+      <form method="POST">
+        <label for="dropdown">Category:</label>
+        <select name="dropdown" id="dropdown" required>
+          {% for option in options %}
+          <option value="{{ option }}">{{ option }}</option>
+          {% endfor %}
+        </select>
+        <br>
+        <label for="text">Search term:</label>
+        <input type="text" name="text" id="text" required>
+        <br>
+        <button type="submit">Submit</button>
+      </form>
+      <div id="results">
+        <p style="text-align:center">Search Term: <strong>{{ request.form['text']}}</strong> </p>
+        <p style="text-align:center">Category: <strong>{{ request.form['dropdown']}}</strong> </p>
+  {% if new_lst %}
+  {% for item in new_lst %}
+    {% for k, v in item.items() %}
+      {% if k != "investigation_text" %}
+        {% if v %}
+          <p style="text-align:center">{{ k }} : {{ v }}</p>
+        {% else %}
+          <p style="text-align:center">{{ k }} : No Results </p>
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+    {% if "investigation_text" in item %}
+    <p style="text-align:center">Investigation Report</p>
+      <p style="text-align:center">{{ item["investigation_text"] }}</p>
+    {% endif %}
+    <br>
+  {% endfor %}
+  {% else %}
+    <p style="text-align:center">No Matches Found. Please Try again!</p>
+{% endif %}
+</div>
+    </div>
+  </body>
+</html>

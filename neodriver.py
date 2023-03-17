@@ -9,25 +9,27 @@ connect = GraphDatabase.driver(uri, auth=("neo4j", "password"))
 session = connect.session()
 
 
-neo4jdict = {"Case-ID":"CaseID","detectives" :"detective","Area":"Area","witnesses":"Witness","suspects":"Suspect","involved":"Involved",\
-"car":"Vehicle","weapon":"Weapon"}
+neo4jdict = {"Case-ID":"CaseID","detectives" :"Detective","Area":"Area","witnesses":"Witness","suspects":"Suspect","involved":"Involved",\
+"cars":"Vehicle","weapon":"Weapon","license":"License","victim":"Victim"}
 
-def area(name):
-	lst = set()
+def area(name,category):
+	lst = {}
+	lst[name] = set()
 	query = f"""MATCH (n:AreaOfOccurrence)-[r]-(p) where tolower(n.name) = "{name}" return n,r,p"""
 	matchall = session.run(query)
 	for i in matchall:
 		relation_type  = i['r'].type
 		caseFound = relation_type == 'caseFound'
 		if caseFound:
-			lst.add(i['p']['UID'])
-	print("Cases ", lst,len(lst))
+			lst[name].add(i['p']['UID'])
+	return lst
 
 
 
 def objectSearch(name,category):
 	name = name.lower()
-	lst = set()
+	lst = {}
+	lst[name]  =set()
 	query = query = f"""
 	MATCH (n:{neo4jdict[category]}{{Name:"{name}"}})-[r:{neo4jdict[category]}]->(p:CaseID) 
 	RETURN n, r, p"""
@@ -36,7 +38,7 @@ def objectSearch(name,category):
 		relation_type  = i['r'].type
 		caseFound = relation_type == str(neo4jdict[category])
 		if caseFound:
-			lst.add(i['p']['UID'])
+			lst[name].add(i['p']['UID'])
 	return lst
 
 
@@ -57,24 +59,32 @@ def persons(name,category):
 	return lst
 
 def person(name, category):
-	build_dict = defaultdict(set)
-	query = f"""
+	lst = set()
+	if category == "detectives":
+		query = f"""
 	MATCH (n:Detective)-[r:DetectiveFor]->(p:CaseID) where toLower(n.Det_name) = toLower("{name}")  return n,r,p
+	"""
+	else:
+		print("Ran victim search")
+		query = f"""
+	MATCH (n:Victim)-[r:caseHasVictim]->(p:CaseID) where toLower(n.Name) = toLower("{name}")  return n,r,p
 	"""
 	matchall = session.run(query)
 	for i in matchall:
+		print(i)
 		relation_type  = i['r'].type
-		caseHasDetective = relation_type == 'DetectiveFor'
-		if caseHasDetective:
-			build_dict[relation_type].add(i['p']['UID'])
-	return build_dict
+		caseCheck = relation_type == 'DetectiveFor' or relation_type == 'caseHasVictim'
+		if caseCheck:
+			lst.add(i['p']['UID'])
+	return lst
 
 
 def person_builder(name):
-	persondict = {"detectives":"Detective","witnesses":"Witness","suspects":"Suspect","involved":"Involved"}
+	persondict = {"detectives":"Detective","witnesses":"Witness","suspects":"Suspect","involved":"Involved","victim":"Victim"}
 	associated_cases = defaultdict(list)
 	for k,v in persondict.items():
-		if k != "detectives":
+		if k not in  set(["detectives","victim"]):
+			print("K ",k)
 			lst = persons(name,k)
 			associated_cases[k]  = lst if lst else []
 		else:

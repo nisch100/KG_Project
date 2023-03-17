@@ -22,7 +22,7 @@ Preprocess CSV
 '''
 
 path = 'Relevantfiles/'
-df = pd.read_csv(path + 'df.csv')
+df = pd.read_csv(path + 'df.csv', sep ='\t')
 nlp = spacy.load("en_core_web_trf")
 def camel_case_split(original_token):
   import re
@@ -115,7 +115,7 @@ INGESTING DATA
 index_name = "original"
 
 if es.indices.exists(index = index_name):
-	print("Found")
+	pass
 	#es.indices.delete(index=index_name)
 for k,v in d.items():
 	print(eventrelation[k])
